@@ -1,6 +1,6 @@
 'This is a oversimplified propellant mass calculator with inaccurate or intentionally wrong values used to test the integration into Flow'
 import math as m
-           # define as input
+# missing variables are defined as input in flow
 
 'Orbital speed required'
 # Input: LEO altitude
@@ -33,5 +33,6 @@ m_wet_S1 = MR_S1*(m_wet_S2 + m_dry_S1)
 
 m_prop_S2 = m_wet_S2 - m_payload - m_dry_S2
 m_prop_S1 = m_wet_S1 - m_wet_S2 - m_dry_S1
+
 
 
