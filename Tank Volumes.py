@@ -1,5 +1,3 @@
-
-
 rof_S1 = 2.2
 rof_S2 = 2.1
 
@@ -10,5 +8,6 @@ m_ox_S2 = m_prop_S1*(rof_S2/(1+rof_S2))
 
 
 v_ox_tank_S1 = m_ox_S1/rho_ox
+
 
 
