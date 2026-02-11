@@ -37,6 +37,7 @@ m_prop_S2 = m_wet_S2 - m_payload - m_dry_S2
 m_prop_S1_output = m_wet_S1 - m_wet_S2 - m_dry_S1
 m_prop_S1_input = m_prop_S1_output
 
+s1_isp_output = 265
 
 
 
