@@ -19,7 +19,7 @@ dv_total = dv_orbital +dv_gravitational +dv_drag +dv_steering
 
 dv_S1 = 0.42*dv_total
 dv_S2 = 0.58*dv_total
-S1_isp = 255
+
 S2_isp = 310
 
 MR_S1 = (m.e)**(dv_S1/(g*S1_isp))
@@ -35,6 +35,7 @@ m_prop_S2 = m_wet_S2 - m_payload - m_dry_S2
 
 m_prop_S1_output = m_wet_S1 - m_wet_S2 - m_dry_S1
 m_prop_S1_input = m_prop_S1_output
+
 
 
 
