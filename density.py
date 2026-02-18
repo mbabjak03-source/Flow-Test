@@ -11,12 +11,12 @@ from CoolProp.CoolProp import PropsSI
 
 def parse_args():
     p = argparse.ArgumentParser(
-        description="Compute density from temperature using CoolProp (default fluid=Air, P=101325 Pa)."
+        description="Compute density from temperature using CoolProp (default fluid=Oxygen, P=101325 Pa)."
     )
     p.add_argument("temperature", type=float, help="Temperature value (Kelvin by default, see --unit).")
     p.add_argument("--unit", choices=["K", "C"], default="K", help="Temperature unit (K or C). Default: K.")
     p.add_argument("--pressure", type=float, default=101325.0, help="Pressure in Pa. Default: 101325.")
-    p.add_argument("--fluid", default="Air", help='Fluid name (CoolProp). Default: "Air".')
+    p.add_argument("--fluid", default="Oxygen", help='Fluid name (CoolProp). Default: "Oxygen".')
     p.add_argument("--out", help="Optional path to write JSON output.")
     return p.parse_args()
 
@@ -24,7 +24,7 @@ def main():
     args = parse_args()
 
     # Convert temperature to Kelvin if needed
-    T_K = args.temperature if args.unit == "K" else (args.temperature + 273.15)
+    T_K = args.temperature if args.unit == "K" else (args.temperature)
     P_Pa = float(args.pressure)
     fluid = args.fluid
 
