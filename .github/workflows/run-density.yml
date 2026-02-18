@@ -31,3 +31,26 @@ jobs:
         with:
           name: density-result
           path: outputs.json
+
+
+          - name: Export CSV for Flow
+        run: |
+          python - << 'PY'
+          import json, csv
+          with open("outputs.json") as f:
+              o = json.load(f)
+          with open("values.csv", "w", newline="") as c:
+              w = csv.writer(c)
+              # key,value,unit  (adjust headers/format to what Flow expects in your tenant)
+              w.writerow(["key","value","unit"])
+              w.writerow(["analysis.air_density_at_inlet", o["outputs"]["density_kg_per_m3"], "kg/m^3"])
+          print("Wrote values.csv")
+          PY
+
+      - name: Commit CSV back to repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add values.csv
+          git commit -m "CI: export values for Flow" || echo "No changes"
+          git push
