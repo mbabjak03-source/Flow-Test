@@ -1,0 +1,29 @@
+name: Compute & Push Flow Model Value
+
+on:
+  workflow_dispatch:      # manual trigger
+  schedule:
+    - cron: "0 */6 * * *" # optional: every 6 hours
+  push:
+    paths:
+      - compute_and_push.py
+      - requirements.txt
+
+jobs:
+  run-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install -r requirements.txt
+
+      - name: Run calc & push to Flow
+        env:
+          FLOW_ORG_ALIAS:     ${{ vars.FLOW_ORG_ALIAS }}        # set as a repo "Variable"
+          FLOW_PROJECT_ALIAS: ${{ vars.FLOW_PROJECT_ALIAS }}    # set as a repo "Variable"
+          FLOW_REFRESH_TOKEN: ${{ secrets.FLOW_REFRESH_TOKEN }} # store as a Secret
+        run: python compute_and_push.py
