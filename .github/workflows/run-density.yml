@@ -1,56 +1,131 @@
-name: Run density with CoolProp
+name: Run density with CoolProp and push CSV
 
 on:
+  # Manual run with inputs
   workflow_dispatch:
+    inputs:
+      temperature:
+        description: "Temperature value (default 288.15)."
+        required: false
+        default: "288.15"
+      unit:
+        description: "Temperature unit: K or C (default K)."
+        required: false
+        default: "K"
+      pressure:
+        description: "Pressure in Pa (default 101325)."
+        required: false
+        default: "101325"
+      fluid:
+        description: 'Fluid name for CoolProp (default "Air").'
+        required: false
+        default: "Air"
+
+  # Also run automatically if code or requirements change
   push:
     paths:
       - "density.py"
       - "requirements.txt"
+      - ".github/workflows/run-density.yml"
+
+permissions:
+  contents: write   # required for committing the CSV back to the repo
+
+concurrency:
+  group: run-density-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "No requirements.txt found; installing CoolProp directly."
+            pip install CoolProp
+          fi
 
-      - name: Run density (288.15 K)
+      - name: Resolve inputs
+        id: resolve
+        shell: bash
         run: |
-          python density.py 288.15 --out outputs.json
+          # Defaults for manual run; for push-trigger we also use defaults.
+          TEMP="${{ github.event.inputs.temperature || '288.15' }}"
+          UNIT="${{ github.event.inputs.unit || 'K' }}"
+          PRESS="${{ github.event.inputs.pressure || '101325' }}"
+          FLUID="${{ github.event.inputs.fluid || 'Air' }}"
 
-      - name: Upload results
-        uses: actions/upload-artifact@v4
-        with:
-          name: density-result
-          path: outputs.json
+          echo "temp=$TEMP"   >> $GITHUB_OUTPUT
+          echo "unit=$UNIT"   >> $GITHUB_OUTPUT
+          echo "press=$PRESS" >> $GITHUB_OUTPUT
+          echo "fluid=$FLUID" >> $GITHUB_OUTPUT
 
+      - name: Run density.py
+        run: |
+          python density.py \
+            "${{ steps.resolve.outputs.temp }}" \
+            --unit "${{ steps.resolve.outputs.unit }}" \
+            --pressure "${{ steps.resolve.outputs.press }}" \
+            --fluid "${{ steps.resolve.outputs.fluid }}" \
+            --out outputs.json
 
-          - name: Export CSV for Flow
+      - name: Create values.csv from outputs.json
         run: |
           python - << 'PY'
-          import json, csv
-          with open("outputs.json") as f:
-              o = json.load(f)
-          with open("values.csv", "w", newline="") as c:
-              w = csv.writer(c)
-              # key,value,unit  (adjust headers/format to what Flow expects in your tenant)
-              w.writerow(["key","value","unit"])
-              w.writerow(["analysis.air_density_at_inlet", o["outputs"]["density_kg_per_m3"], "kg/m^3"])
-          print("Wrote values.csv")
+          import json, csv, sys
+          from pathlib import Path
+
+          out_json = Path("outputs.json")
+          if not out_json.exists():
+            print("outputs.json not found", file=sys.stderr)
+            sys.exit(1)
+
+          data = json.loads(out_json.read_text(encoding="utf-8"))
+          density = data["outputs"]["density_kg_per_m3"]
+          unit = "kg/m^3"
+
+          # Simple format: key,value,unit (adjust headers if you prefer)
+          with open("values.csv", "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["key", "value", "unit"])
+            w.writerow(["analysis.air_density_at_inlet", density, unit])
+
+          print("✅ Wrote values.csv")
           PY
 
-      - name: Commit CSV back to repo
+      - name: Upload build artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: density-results
+          path: |
+            outputs.json
+            values.csv
+
+      - name: Commit and push values.csv back to repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Configure git author
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add and commit CSV
           git add values.csv
-          git commit -m "CI: export values for Flow" || echo "No changes"
-          git push
+          git commit -m "CI: update density CSV from workflow" || echo "No changes to commit"
+
+          # In case branch moved ahead, rebase and push
+          git pull --rebase || true
+          git push || true
